@@ -16,12 +16,12 @@ COPY ./change-to-scylladb-driver.sh .
 
 
 RUN chmod +x change-to-scylladb-driver.sh \
-    && ./change-to-scylladb-driver.sh $SCYLLADB_JAVA_DRIVER \
+    && ./change-to-scylladb-driver.sh ${SCYLLADB_JAVA_DRIVER} \
     && mvn \
     -P!build-nb5-appimage \
     -P!build-nbr-appimage \
     -DskipTests=true \
-    -Drevision="$GIT_TAG" \
+    -Drevision="$NOSQLBENCH_GIT_TAG" \
     package
 
 FROM eclipse-temurin:21-jre-noble AS production
@@ -39,4 +39,4 @@ ENV PATH="/nosqlbench:$PATH"
 
 SHELL [ "/bin/bash" ]
 
-CMD ["nosqlbench"]
+ENTRYPOINT [ "nosqlbench" ]

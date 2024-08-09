@@ -99,7 +99,7 @@ docker build \
     -t "scylladb/hydra-loaders:nosqlbench-\<version>" \
     --build-arg "SCYLLADB_JAVA_DRIVER=4.18.0.1" \
     --target production \
-    --compress
+    --compress .
 ```
 
 ## Running NoSQLBench from the Docker Image
