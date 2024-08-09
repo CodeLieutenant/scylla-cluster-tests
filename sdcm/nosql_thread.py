@@ -68,7 +68,7 @@ class NoSQLBenchStressThread(DockerBasedStressThread):  # pylint: disable=too-ma
         else:
             target_address = self.node_list[0].cql_address
 
-        dc = self.node_list[0].dc
+        dc = self.node_list[0].datacenter
 
         with self._per_loader_count_lock:
             threads_on_loader = self._per_loader_count.get(loader_idx, 0)
