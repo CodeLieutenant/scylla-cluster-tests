@@ -38,5 +38,3 @@ RUN chmod +x nosqlbench
 ENV PATH="/nosqlbench:$PATH"
 
 SHELL [ "/bin/bash" ]
-
-ENTRYPOINT [ "nosqlbench" ]
