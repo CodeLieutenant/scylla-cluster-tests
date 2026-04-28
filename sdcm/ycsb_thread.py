@@ -390,34 +390,19 @@ class YcsbStressThread(DockerBasedStressThread):
                     " because it is always used in this case."
                 )
         else:
-            alternator_port = self.params.get("alternator_port")
-            dns_cmd = f"python3 /dns_server.py {self.db_node_to_query(loader)} {alternator_port}"
-            dns_image = self.params.get("stress_image.alternator-dns")
             dns_options, cpu_options = "", ""
             if self.stress_num > 1:
                 cpu_options = f'--cpuset-cpus="{cpu_idx}"'
             if self.params.get("alternator_use_dns_routing"):
-                dns = RemoteDocker(
-                    loader,
-                    dns_image,
-                    command_line=dns_cmd,
-                    extra_docker_opts=f"--cap-add=NET_BIND_SERVICE --label shell_marker={self.shell_marker}",
-                    docker_network=self.params.get("docker_network"),
-                )
-                dns_ip = dns.internal_ip_address
-                # Wait for the DNS server to be ready (port 53/tcp)
-                for attempt in range(30):
-                    result = loader.remoter.run(
-                        f"timeout 1 bash -c 'echo > /dev/tcp/{dns_ip}/53' 2>/dev/null",
-                        ignore_status=True,
-                    )
-                    if result.ok:
-                        break
-                    if attempt == 29:
-                        dns_logs = loader.remoter.run(f"docker logs {dns.docker_id} 2>&1", ignore_status=True).stdout
-                        raise RuntimeError(f"DNS container failed to bind port 53 after 30s. Logs:\n{dns_logs}")
-                    time.sleep(1)
-                dns_options += f"--dns {dns_ip} --dns-option use-vc"
+                # Inject 'alternator' directly into /etc/hosts via --add-host.
+                # The DNS container approach (separate container + --dns) stopped working
+                # with YCSB 1.2.0+ because NettyNioAsyncHttpClient uses Netty's own
+                # DnsNameResolver which does not reliably pick up the Docker-injected
+                # nameserver for single-label bare hostnames.  /etc/hosts is checked
+                # first by both glibc and Netty (HostsFileParser, Netty >= 4.1.75),
+                # so --add-host bypasses all DNS-resolver differences.
+                db_node_ip = self.db_node_to_query(loader)
+                dns_options += f"--add-host alternator:{db_node_ip}"
             extra_docker_opts = (
                 f"{dns_options} {cpu_options} --entrypoint /bin/bash --label shell_marker={self.shell_marker}"
             )
