@@ -724,11 +724,8 @@ class ClusterTester(unittest.TestCase):
             seed = self.params.get("gemini_seed")
             gemini_command, *_ = self.gemini_results["cmd"]
             if not seed:
-                seed_match = re.search(r"--seed (?P<seed>\d+) ", gemini_command)
-                if seed_match:
-                    seed = seed_match.groupdict().get("seed", -1)
-                else:
-                    seed = -1
+                seed_match = re.search(r"--seed[= ](\d+)", gemini_command)
+                seed = seed_match.group(1) if seed_match else -1
 
             results = self.gemini_results["results"]
             results = results[0] if len(results) > 0 else None
