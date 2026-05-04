@@ -3103,9 +3103,12 @@ class ClusterTester(unittest.TestCase):
     def run_gemini(self, cmd, duration=None):
         if duration:
             timeout = self.get_duration(duration)
-        elif self._stress_duration and "--duration" in cmd:
+        elif self._stress_duration:
             timeout = self.get_duration(self._stress_duration)
-            cmd = re.sub(r"(^|\s)--duration\s+\S+", f"\\1--duration {self._stress_duration}m", cmd)
+            if "--duration" in cmd:
+                cmd = re.sub(r"(^|\s)--duration\s+\S+", f"\\1--duration {self._stress_duration}m", cmd)
+            else:
+                cmd = cmd + f" --duration {self._stress_duration}m"
         else:
             timeout = get_timeout_from_stress_cmd(cmd) or self.get_duration(duration)
         return GeminiStressThread(

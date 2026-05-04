@@ -65,7 +65,10 @@ def test_get_timeout_from_stress_cmd(stress_cmd, timeout):
 
 def _apply_gemini_stress_duration(cmd: str, stress_duration: int) -> str:
     """Mirror of the substitution logic in ClusterTester.run_gemini()."""
-    cmd = re.sub(r"(^|\s)--duration\s+\S+", f"\\1--duration {stress_duration}m", cmd)
+    if "--duration" in cmd:
+        cmd = re.sub(r"(^|\s)--duration\s+\S+", f"\\1--duration {stress_duration}m", cmd)
+    else:
+        cmd = cmd + f" --duration {stress_duration}m"
     return cmd
 
 
@@ -114,15 +117,22 @@ def _apply_gemini_stress_duration(cmd: str, stress_duration: int) -> str:
             "--duration 60m",
             id="10h-test-override-to-1h",
         ),
+        # stress_duration set but gemini_cmd has no --duration at all → must be injected
+        pytest.param(
+            "--concurrency 50\n--mode mixed",
+            90,
+            "--duration 90m",
+            id="no-duration-in-cmd-stress-duration-injected",
+        ),
     ],
 )
 def test_run_gemini_stress_duration_substitution(original_cmd, stress_duration, expected_duration):
-    """Verify the duration substitution in run_gemini() rewrites --duration correctly."""
-    assert "--duration" in original_cmd, "precondition: cmd must contain --duration"
-
+    """Verify stress_duration always takes precedence: replaces existing --duration or injects one."""
     result = _apply_gemini_stress_duration(original_cmd, stress_duration)
 
     assert expected_duration in result, f"Expected '{expected_duration}' in result, got: {result!r}"
+    # original flags unrelated to duration must survive
+    assert "--concurrency" in result, f"--concurrency must be preserved, got: {result!r}"
     # warmup flag must be left untouched
     if "--warmup" in original_cmd:
         assert "--warmup 30m" in result, f"--warmup should not be modified, got: {result!r}"
