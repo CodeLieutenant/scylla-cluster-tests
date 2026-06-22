@@ -3,6 +3,7 @@ import json
 import logging
 import re
 import os
+import tempfile
 from pathlib import Path
 import threading
 from typing import Optional
@@ -71,21 +72,27 @@ def is_uuid(uuid) -> bool:
     try:
         UUID(uuid)
         return True
-    except (ValueError, AttributeError, TypeError):
+    except Exception:  # noqa: BLE001  # any parse failure means it isn't a UUID
         return False
 
 
-def get_argus_client(run_id: UUID | str, use_tunnel: bool, init_global=True) -> ArgusSCTClient:
+def get_argus_client(
+    run_id: UUID | str, use_tunnel: bool, init_global=True, log_dir: str | None = None
+) -> ArgusSCTClient:
     if not is_uuid(run_id):
         raise ArgusError("Malformed UUID provided")
 
     creds = KeyStore().get_argus_rest_credentials_per_provider()
+    # The replay log is always created, so a real log_dir is required. Prefer the
+    # SCT test logdir (so logcollector picks the replay log up) and only fall back
+    # to a temp dir for callers that have neither an explicit log_dir nor a logdir.
     argus_client = ArgusSCTClient(
         run_id=run_id,
         auth_token=creds["token"],
         base_url=creds["baseUrl"],
         extra_headers=creds.get("extra_headers"),
         use_tunnel=use_tunnel,
+        log_dir=log_dir or os.environ.get("_SCT_TEST_LOGDIR") or tempfile.gettempdir(),
     )
 
     if init_global:

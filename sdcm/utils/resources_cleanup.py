@@ -16,7 +16,7 @@ import logging
 import os
 import time
 import ipaddress
-from unittest.mock import MagicMock
+import tempfile
 from collections import defaultdict
 
 from botocore.exceptions import ClientError
@@ -25,6 +25,7 @@ import google.api_core.exceptions
 import oci
 from google.cloud.compute_v1.types import Instance as GceInstance
 from mypy_boto3_ec2 import EC2Client
+from argus.client.sct.client import ArgusSCTClient
 
 from sdcm.cloud_api_client import ScyllaCloudAPIClient, ScyllaCloudAPIError
 from sdcm.provision.oci.constants import TAG_NAMESPACE
@@ -80,7 +81,15 @@ def init_argus_client(test_id: str, use_tunnel: bool | None = None):
         argus_client = get_argus_client(run_id=test_id, use_tunnel=use_tunnel)
     except ArgusError as exc:
         LOGGER.warning("Unable to initialize Argus: %s", exc.message)
-        argus_client = MagicMock()
+        # Fall back to replay-only mode so all intended API calls are still
+        # captured to the replay log instead of being silently mocked away.
+        argus_client = ArgusSCTClient(
+            run_id=test_id,
+            auth_token="",
+            base_url="",
+            log_dir=os.environ.get("_SCT_TEST_LOGDIR") or tempfile.gettempdir(),
+            replay_log_only=True,
+        )
     return argus_client
 
 

@@ -27,7 +27,6 @@ import sys
 import time
 import traceback
 import unittest
-import unittest.mock
 from pathlib import Path
 from typing import NamedTuple, Optional, Union, List, Dict, Any
 from uuid import uuid4
@@ -487,7 +486,7 @@ class ClusterTester(unittest.TestCase):
 
     def start_argus_heartbeat_thread(self) -> threading.Event:
         def send_argus_heartbeat(client: ArgusSCTClient, stop_signal: threading.Event):
-            if isinstance(client, unittest.mock.MagicMock):
+            if getattr(client, "_replay_log_only", False):
                 return
             fail_count = 0
             while not stop_signal.is_set():
